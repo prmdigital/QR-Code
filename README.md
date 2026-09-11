@@ -4,10 +4,16 @@ Single-file, offline QR code generator. The URL you type is encoded **literally*
 the QR matrix — no shortener, no redirect domain, no third-party app in the middle.
 Scanning goes straight to your link, and nobody but you sees the traffic.
 
+**Live:** https://prmdigital.github.io/QR-Code/
+
 ## Use it
 
-Double-click `index.html`. That's the whole install — it works offline, from a USB stick,
-or emailed to someone. No build step, no server, no account, no network calls.
+Open the **[live version](https://prmdigital.github.io/QR-Code/)** in any browser — nothing
+to install. Everything runs on your device; the URLs you type are never sent anywhere.
+
+Or use it offline: download `index.html` (or `qr-code-generator.html` from
+[Releases](https://github.com/prmdigital/QR-Code/releases)) and double-click it. It works
+from a USB stick or as an email attachment. No server, no account, no network calls.
 
 ## What it does
 

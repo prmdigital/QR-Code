@@ -5,8 +5,7 @@
 //                       dist/SHA256SUMS.txt
 //
 // There is no compile step — index.html already runs as-is. The build stamps
-// the version, drops the dangling source-map reference from the inlined
-// library, and packages the page with its README and license notices.
+// the version and packages the page with its README and license notices.
 // No dependencies: Node >= 22 (for zlib.crc32).
 
 import { readFileSync, writeFileSync, mkdirSync, rmSync } from "node:fs";
@@ -23,11 +22,7 @@ const date = new Date().toISOString().slice(0, 10);
 let html = read("index.html").toString("utf8");
 const MARK = "<!--BUILD-->";
 if (!html.includes(MARK)) throw new Error(`index.html is missing the ${MARK} marker`);
-html = html
-  .replace(MARK, ` · v${version} · built ${date}`)
-  // Points at a jsDelivr map that doesn't ship with the file; only causes a
-  // 404 in devtools.
-  .replace(/^\/\/# sourceMappingURL=.*$/m, "");
+html = html.replace(MARK, ` · v${version} · built ${date}`);
 
 const page = Buffer.from(html, "utf8");
 const zipName = `qr-code-generator-v${version}.zip`;
