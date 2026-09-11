@@ -1,0 +1,10 @@
+# Build output — attached to GitHub Releases instead of committed
+dist/
+
+node_modules/
+
+# Local Claude Code preview config
+.claude/
+
+# Test-only decoder used during verification
+_jsqr_test.js

@@ -1,0 +1,13 @@
+{
+  "name": "qr-code",
+  "version": "1.0.0",
+  "description": "Offline QR code generator that encodes URLs directly — no redirect service, no tracking.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
