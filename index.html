@@ -680,10 +680,28 @@ ${dots ? `<g fill="${ink}">${dots}</g>` : ""}
     try { return new URL(t).hostname.replace(/^www\./, "") || "qr"; }
     catch { return "qr"; }
   }
-  function save(blob, name) {
+  // When running as a claude.ai Artifact, direct anchor downloads are blocked
+  // by the sandbox; route saves through the downloads capability instead.
+  // Everywhere else (offline file, GitHub Pages) window.claude is absent, so
+  // this resolves null and the original anchor download is used unchanged.
+  let _dlCap;
+  const downloadsCap = () =>
+    (_dlCap ??= (typeof window.claude?.use === "function"
+      ? Promise.resolve(window.claude.use("downloads")).catch(() => null)
+      : Promise.resolve(null)));
+
+  // Returns true if the save was handled by the capability (incl. a decline),
+  // false if it fell back to the anchor path (so callers can pace bursts).
+  async function save(blob, name) {
+    const dl = await downloadsCap();
+    if (dl) {
+      try { await dl.save({ filename: name, data: blob }); return true; }
+      catch (e) { if (e && e.code === "declined") return true; }
+    }
     const u = URL.createObjectURL(blob), a = document.createElement("a");
     a.href = u; a.download = name; a.click();
     setTimeout(() => URL.revokeObjectURL(u), 1000);
+    return false;
   }
 
   const FORMATS = {
@@ -833,6 +851,16 @@ ${dots ? `<g fill="${ink}">${dots}</g>` : ""}
       $("linkVal").select(); document.execCommand("copy");
     }
   };
+  // In the Artifact sandbox the <a download> won't fire; route the file
+  // through the downloads capability. Elsewhere, let the anchor work.
+  $("linkSave").addEventListener("click", async e => {
+    const dl = await downloadsCap();
+    if (!dl) return;                       // normal anchor download works
+    e.preventDefault();
+    const a = $("linkSave");
+    const blob = await (await fetch(a.href)).blob();
+    save(blob, a.getAttribute("download") || "qr");
+  });
 
   function restoreFromHash() {
     if (!location.hash.length) return;
@@ -891,18 +919,26 @@ ${dots ? `<g fill="${ink}">${dots}</g>` : ""}
     }
     el.bulkDl.disabled = batch.length === 0;
   };
-  el.bulkDl.onclick = () => {
+  el.bulkDl.onclick = async () => {
     const f = FORMATS[state.fmt];
-    batch.forEach((item, i) => setTimeout(() => {
+    for (let i = 0; i < batch.length; i++) {
+      const item = batch[i];
       const stem = `${String(i + 1).padStart(2, "0")}-${slug(item.text)}-qr`;
+      let blob, name;
       if (state.fmt === "svg") {
-        save(new Blob([toSvg(item.qr, item.opts)], { type:f.mime }), `${stem}.svg`);
-        return;
+        blob = new Blob([toSvg(item.qr, item.opts)], { type:f.mime });
+        name = `${stem}.svg`;
+      } else {
+        const c = document.createElement("canvas");
+        draw(c, item.qr, +el.size.value, exportOpts(item.opts));
+        blob = await new Promise(r => c.toBlob(r, f.mime, 0.95));
+        if (!blob) continue;
+        name = `${stem}.${f.ext}`;
       }
-      const c = document.createElement("canvas");
-      draw(c, item.qr, +el.size.value, exportOpts(item.opts));
-      c.toBlob(b => b && save(b, `${stem}.${f.ext}`), f.mime, 0.95);
-    }, i * 350));                                   // stagger: browsers throttle bursts
+      // One capability prompt at a time; await each. Offline, stagger bursts.
+      const viaCap = await save(blob, name);
+      if (!viaCap && i < batch.length - 1) await new Promise(r => setTimeout(r, 300));
+    }
   };
 
   /* ── wiring ───────────────────────────────────────────── */
